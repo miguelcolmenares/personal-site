@@ -20,7 +20,8 @@ export const site = {
    *   NEXT_PUBLIC_SITE_URL=https://miguelcolmenares.com
    */
   url:
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://personal-site-mc.vercel.app",
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    "https://personal-site-miguelcolmenares-projects.vercel.app",
   description:
     "Senior Frontend Engineer. Nine production Next.js platforms since 2023, a performance thread that runs six years further back, and notes on what each one taught me.",
   location: "Madrid, Cundinamarca, Colombia",
