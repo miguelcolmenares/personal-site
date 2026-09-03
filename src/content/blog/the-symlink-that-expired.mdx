@@ -1,0 +1,97 @@
+---
+title: "The symlink that expired five months later"
+date: "2026-09-02"
+summary: "A one-line rename in VS Code broke extension testing on macOS — but not for five months, and not where the change was made. What that delay taught me about hardcoding other people's names."
+tags: ["debugging", "open source", "macos", "vs code"]
+published: true
+---
+
+In late July 2026, test runs for VS Code extensions started failing on macOS with an error that reads like a filesystem problem:
+
+```
+Error: spawn /…/Visual Studio Code - Insiders.app/Contents/MacOS/Electron ENOENT
+```
+
+`ENOENT` means "no such file or directory." The path was right there in the message. The `.app` bundle had downloaded and unzipped without complaint. And yet the binary at the end of that path did not exist.
+
+What made it worth writing about is not the fix, which is small. It is that the change responsible had shipped **five months earlier**, and had been harmless the entire time.
+
+## The misleading part
+
+The first thing that slowed me down was that the failure was partial.
+
+`@vscode/test-electron` does two things with a downloaded build: it runs a `--version` probe to confirm the download is sane, and it launches the app to run your tests. The probe kept passing. Only the launch failed.
+
+That combination points you in the wrong direction. A corrupt download fails both. A permissions problem fails both. Something that passes one check and fails the next suggests the two checks are reaching different places — which turned out to be exactly right, and is the thread worth pulling.
+
+They resolve the path differently. The probe walks relatively:
+
+```
+../../../Contents/Resources/app/bin/code
+```
+
+The launcher builds an absolute path with a filename baked into the source:
+
+```ts
+path.resolve(appPath, 'Contents', 'MacOS', 'Electron');
+```
+
+One of those depends on a name. The other doesn't. Only the one that depends on a name broke.
+
+## The rename, and the shim that hid it
+
+VS Code 1.110 renamed the macOS main binary. `Contents/MacOS/Electron` became the product's short name — `Code` on Stable, `Code - Insiders` on Insiders. That landed in [microsoft/vscode#291948](https://github.com/microsoft/vscode/pull/291948) and merged on **2026-02-03**.
+
+Nothing broke. The release shipped a compatibility symlink at the old location, so every consumer that had hardcoded `Electron` kept working, unaware that the name it depended on was already gone.
+
+Then, on **2026-07-20**, [microsoft/vscode#326502](https://github.com/microsoft/vscode/pull/326502) removed the symlink. Within a day, the failures started.
+
+| Date | Event |
+| --- | --- |
+| 2026-02-03 | Binary renamed on macOS |
+| 2026-02 | 1.110 ships with an `Electron` → product-name symlink |
+| 2026-07-20 | Symlink removed |
+| ~2026-07-21 | Every consumer spawning the old path starts failing |
+
+So the breaking change and the break were five months and two pull requests apart, in a different repository from the one reporting the error. Nothing in the stack trace pointed at either.
+
+## Asking instead of assuming
+
+The fix is to stop guessing the executable's name and ask the bundle what it is called. macOS already stores this: every `.app` has an `Info.plist`, and `CFBundleExecutable` is the field the operating system itself reads when you double-click the icon.
+
+```ts
+function resolveDarwinAppExecutable(appPath: string): string {
+    const macosDir = path.resolve(appPath, 'Contents', 'MacOS');
+    const infoPlistPath = path.resolve(appPath, 'Contents', 'Info.plist');
+    try {
+        const plist = readFileSync(infoPlistPath, 'utf-8');
+        const match = plist.match(/<key>CFBundleExecutable<\/key>\s*<string>([^<]+)<\/string>/);
+        if (match) {
+            return path.resolve(macosDir, match[1]);
+        }
+    } catch {
+        // Fall through to the legacy `Electron` name.
+    }
+    return path.resolve(macosDir, 'Electron');
+}
+```
+
+Two deliberate choices in something this small.
+
+**A regex instead of a plist parser.** VS Code ships its `Info.plist` as XML, which I verified against a stock 1.111 install. A targeted match avoids adding a dependency or shelling out to `PlistBuddy` — no new packages, no new subprocess, to read one string. If VS Code ever ships a binary plist this fails, and it fails into the fallback below rather than throwing.
+
+**The old name stays as the fallback.** Any bundle whose plist predates the rename, lacks the key, or can't be opened gets exactly the string the function returned before. That makes the change a strict superset of the old behaviour, which is what lets it ship without a version check or a migration note.
+
+It went in as [microsoft/vscode-test#350](https://github.com/microsoft/vscode-test/pull/350), with six unit tests covering Stable and Insiders after the rename, both before it, a malformed plist, and non-macOS platforms — and closed two open issues from people hitting the same wall.
+
+## What I actually took from it
+
+The bug was easy once located. Locating it was the work, and the reason it was hard is the part that generalises.
+
+**A hardcoded name is an undeclared dependency on someone else's decision.** `'Electron'` looks like a constant. It reads like part of the path. It is actually a value owned by a different team, and the moment you write it into your source you have taken a dependency without recording it anywhere — no version range, no changelog entry, nothing to grep when it changes.
+
+**A compatibility shim moves the failure, it doesn't remove it.** The symlink was the right call by the VS Code team; it gave the ecosystem five months to adapt. But it also meant no one adapted, because nothing hurt. The shim converted a loud break at the source into a quiet break later, in someone else's repository, detached from the change that caused it. If you ship one, the deprecation window is only useful if somebody is told the clock is running.
+
+**When the platform exposes the answer, read it.** `CFBundleExecutable` existed the whole time. The original code did not need to guess, and neither does anything else that has to find the executable inside a macOS bundle. Every time I hardcode a name that another system defines, I am betting that it will never change — and that bet gets settled at whatever moment is least convenient.
+
+The last one is the one I keep. Not "write more defensive code" — the fix is barely defensive, it's twelve lines. The habit worth building is noticing, at the moment you type a literal, whether the thing you just wrote belongs to you.
