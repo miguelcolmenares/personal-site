@@ -9,9 +9,18 @@
 export const site = {
   name: "Miguel Colmenares",
   role: "Senior Frontend Engineer",
-  // Replace with the real domain once registered; Vercel serves a URL in the
-  // meantime and nothing else depends on this value.
-  url: "https://miguelcolmenares.vercel.app",
+  /*
+   * Canonical origin, used for Open Graph and metadataBase.
+   *
+   * Serving on Vercel's hostname for now. `miguelcolmenares.com` is already
+   * registered (on Cloudflare, serving nothing yet) and is where this moves,
+   * so the switch is a single environment variable in the Vercel project
+   * rather than a code change and redeploy:
+   *
+   *   NEXT_PUBLIC_SITE_URL=https://miguelcolmenares.com
+   */
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://personal-site-mc.vercel.app",
   description:
     "Senior Frontend Engineer. Nine production Next.js platforms since 2023, a performance thread that runs six years further back, and notes on what each one taught me.",
   location: "Madrid, Cundinamarca, Colombia",

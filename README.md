@@ -94,6 +94,22 @@ The template also shipped placeholder projects (Northstar, Field Notes,
 Signal) and placeholder art. None of it was kept; invented work has no place
 on a portfolio.
 
+## Domain
+
+The site serves on its Vercel hostname today. `miguelcolmenares.com` is
+registered and is where it moves.
+
+`src/lib/site.ts` reads `NEXT_PUBLIC_SITE_URL`, so attaching the domain is one
+environment variable in the Vercel project — no code change, no redeploy from
+a commit:
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://miguelcolmenares.com
+```
+
+That value feeds `metadataBase`, so Open Graph and canonical URLs follow it
+automatically. Setting it is the whole migration.
+
 ## Facts
 
 Anything factual on this site (years, platform counts, performance numbers) must
