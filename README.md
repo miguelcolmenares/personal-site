@@ -70,15 +70,29 @@ follows.
 
 ## Design
 
-Tokens in `src/app/globals.css` intentionally share their architecture with
-`image-optimizer-web`: cool-biased neutrals rather than default grey, a
-near-zero radius so structure is drawn with hairline rules instead of cards, and
-mono type promoted from small print to structural furniture (`.eyebrow`, article
-metadata, tag chips).
+The visual system comes from a v0 template generated against the
+[codebymike.tech](https://codebymike.tech/) reference: near-black ground
+(`#101211`), a single high-chroma lime accent (`#c4f269`), Geist and Geist
+Mono, display type at `clamp(3.2rem, 8vw, 7rem)` with `-0.075em` tracking, and
+mono uppercase micro-labels numbering each section.
 
-The accent differs on purpose. There, amber is the product's brand mark; here
-the accent marks *the writing* — links, the emphasised half of the headline. The
-two sites should read as siblings, not as clones.
+Three things were changed on the way in, and they are worth keeping changed:
+
+1. **The CSS was reformatted.** v0 emits every rule on one line, which is fine
+   as generated output and unworkable as a file people edit.
+2. **The site commits to a single dark look** — `color-scheme: dark`, no light
+   palette. That is deliberate: the identity is the dark ground plus one
+   accent, and a light variant would need a different accent to hold contrast,
+   which is a second design rather than a theme of this one.
+3. **The "product direction / design systems" capability framing was dropped.**
+   `AGENTS.md` states plainly that Miguel is not a designer and consumes design
+   rather than authoring it, so that copy would have contradicted the source of
+   truth. The three capabilities now describe performance, Next.js platforms
+   and CI — all of which the record supports.
+
+The template also shipped placeholder projects (Northstar, Field Notes,
+Signal) and placeholder art. None of it was kept; invented work has no place
+on a portfolio.
 
 ## Facts
 

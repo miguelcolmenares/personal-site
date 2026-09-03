@@ -32,51 +32,66 @@ export const metadata: Metadata = {
   },
 };
 
-const nav = [
-  { href: "/", label: "Index" },
-  { href: "/writing", label: "Writing" },
-];
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} flex min-h-full flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} flex min-h-full flex-col overflow-x-hidden`}
       >
         <header className="border-b border-border">
-          <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-5">
-            <Link href="/" className="font-medium tracking-[-0.01em]">
+          <nav
+            className="container-page flex h-[92px] items-center justify-between"
+            aria-label="Main"
+          >
+            <Link
+              href="/"
+              className="flex items-baseline gap-1.5 text-base font-semibold tracking-[-0.04em]"
+            >
+              <span className="text-[22px] text-primary">+</span>
               {site.name}
             </Link>
-            <nav className="flex gap-5">
-              {nav.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+
+            <div className="hidden gap-8 text-xs text-muted-foreground sm:flex">
+              <Link href="/writing" className="transition-colors hover:text-primary">
+                Writing
+              </Link>
+              <a
+                href={site.links.github}
+                className="transition-colors hover:text-primary"
+              >
+                GitHub
+              </a>
+              <a
+                href={site.links.email}
+                className="transition-colors hover:text-primary"
+              >
+                Contact
+              </a>
+            </div>
+
+            <a
+              href={site.links.email}
+              className="flex items-center gap-2 text-[11px] text-muted-foreground transition-colors hover:text-primary sm:text-xs"
+            >
+              <span className="status-dot" aria-hidden />
+              {site.availability}
+            </a>
+          </nav>
         </header>
 
         <main className="flex-1">{children}</main>
 
         <footer className="border-t border-border">
-          <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 px-6 py-6">
-            <p className="font-mono text-[11px] text-muted-foreground">
-              {site.location}
-            </p>
-            <div className="flex gap-4">
+          <div className="container-page flex flex-wrap justify-between gap-4 py-6 font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
+            <span>{site.location}</span>
+            <div className="flex flex-wrap gap-6">
               {Object.entries(site.links).map(([label, href]) => (
                 <a
                   key={label}
                   href={href}
-                  className="font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                  className="transition-colors hover:text-primary"
                 >
                   {label}
                 </a>

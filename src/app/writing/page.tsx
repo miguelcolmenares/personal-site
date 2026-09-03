@@ -13,7 +13,7 @@ export default function WritingIndex() {
   const posts = getPosts();
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-16">
+    <div className="container-page max-w-[820px] py-20">
       <p className="eyebrow">Writing</p>
       <h1 className="mt-4 text-3xl font-semibold tracking-[-0.025em] text-balance">
         Notes from real projects
@@ -33,7 +33,7 @@ export default function WritingIndex() {
             <li key={post.slug} className="border-b border-border">
               <Link
                 href={`/writing/${post.slug}`}
-                className="group block py-5 transition-colors hover:bg-muted/40"
+                className="group block py-5 transition-colors hover:bg-card"
               >
                 <time
                   dateTime={post.date}
@@ -41,7 +41,7 @@ export default function WritingIndex() {
                 >
                   {formatDate(post.date)}
                 </time>
-                <h2 className="mt-1 font-medium tracking-[-0.01em] group-hover:text-accent">
+                <h2 className="mt-1 font-medium tracking-[-0.01em] group-hover:text-primary">
                   {post.title}
                 </h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">

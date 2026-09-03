@@ -2,19 +2,20 @@
  * Single place for the identity strings, so switching to a real domain later
  * is a one-line change rather than a search across the tree.
  *
- * Numbers here must stay consistent with `AGENTS.md` in the
- * `professional-profile` repo, which is the source of truth recruiters
- * compare the CV, LinkedIn and Upwork against.
+ * Every factual claim here must match `AGENTS.md` in the
+ * `professional-profile` repo, which is the source of truth the CV, LinkedIn
+ * and Upwork are all kept consistent against. Recruiters compare them.
  */
 export const site = {
   name: "Miguel Colmenares",
   role: "Senior Frontend Engineer",
-  // Replace with the real domain once it is registered; Vercel serves a URL
-  // in the meantime and nothing else depends on this value.
+  // Replace with the real domain once registered; Vercel serves a URL in the
+  // meantime and nothing else depends on this value.
   url: "https://miguelcolmenares.vercel.app",
   description:
-    "Senior Frontend Engineer. Nine production Next.js platforms since 2023, a long performance thread that predates them, and notes on what each one taught me.",
+    "Senior Frontend Engineer. Nine production Next.js platforms since 2023, a performance thread that runs six years further back, and notes on what each one taught me.",
   location: "Madrid, Cundinamarca, Colombia",
+  availability: "Open to senior frontend roles",
   links: {
     github: "https://github.com/miguelcolmenares",
     linkedin: "https://linkedin.com/in/miguelension",
@@ -22,3 +23,47 @@ export const site = {
     email: "mailto:miguelension@gmail.com",
   },
 } as const;
+
+/**
+ * The marquee. Only technologies with production work behind them — the
+ * standard stack recorded in `AGENTS.md`, not an aspirational list.
+ */
+export const stack = [
+  "NEXT.JS",
+  "REACT 19",
+  "TYPESCRIPT",
+  "TAILWIND",
+  "WPGRAPHQL",
+  "NODE",
+  "PHP 8.2",
+  "AWS",
+] as const;
+
+/**
+ * What Miguel actually does, phrased against the record.
+ *
+ * Deliberately not the "product direction / design systems" framing the v0
+ * template shipped with: `AGENTS.md` states plainly that he is not a designer
+ * and consumes design rather than authoring it. Claiming otherwise here would
+ * contradict the source of truth and fail at the first interview question.
+ */
+export const capabilities = [
+  {
+    number: "01",
+    title: "Performance that survives the release",
+    description:
+      "96 desktop Lighthouse, 0.8 s LCP, 0 CLS on a production platform — and six years of the same work before the current stack, back to service workers and PWAs on storefronts.",
+  },
+  {
+    number: "02",
+    title: "Next.js platforms, nine of them",
+    description:
+      "App Router, Server Components and Server Actions against headless WordPress and REST, shipped and maintained rather than prototyped.",
+  },
+  {
+    number: "03",
+    title: "Pipelines that catch things early",
+    description:
+      "Matrix testing, CodeQL, Dependabot with auto-merge and SHA-pinned actions across 18+ repositories, plus CI that provisions and requests automated review.",
+  },
+] as const;

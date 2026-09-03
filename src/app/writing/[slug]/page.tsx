@@ -43,7 +43,7 @@ export default async function Article({
   if (!post) notFound();
 
   return (
-    <article className="mx-auto max-w-2xl px-6 py-16">
+    <article className="container-page max-w-[820px] py-20">
       <header className="border-b border-border pb-8">
         <time
           dateTime={post.date}
