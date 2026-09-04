@@ -1,12 +1,12 @@
 ---
 title: "The symlink that expired five months later"
 date: "2026-09-02"
-summary: "A one-line rename in VS Code broke extension testing on macOS — but not for five months, and not where the change was made. What that delay taught me about hardcoding other people's names."
+summary: "My own extension's tests started failing on macOS. I chased the wrong cause first, then found someone else had already diagnosed the right one — and shipped the fix myself instead of waiting."
 tags: ["debugging", "open source", "macos", "vs code"]
 published: true
 ---
 
-In late July 2026, test runs for VS Code extensions started failing on macOS with an error that reads like a filesystem problem:
+In late July 2026 I was cleaning up some functionality in my VS Code extension, [css-js-minifier](https://marketplace.visualstudio.com/items?itemName=miguel-colmenares.css-js-minifier). Its CI runs the extension's tests against a real VS Code Insiders build on macOS, and that run started failing with an error that reads like a filesystem problem:
 
 ```
 Error: spawn /…/Visual Studio Code - Insiders.app/Contents/MacOS/Electron ENOENT
@@ -14,17 +14,19 @@ Error: spawn /…/Visual Studio Code - Insiders.app/Contents/MacOS/Electron ENOE
 
 `ENOENT` means "no such file or directory." The path was right there in the message. The `.app` bundle had downloaded and unzipped without complaint. And yet the binary at the end of that path did not exist.
 
-What made it worth writing about is not the fix, which is small. It is that the change responsible had shipped **five months earlier**, and had been harmless the entire time.
+## The lead that went nowhere
+
+My first guess was Apple's, not Microsoft's. A few days earlier my local Java install had thrown a Rosetta warning, and I'd been reading Apple's notes on [Intel-app support winding down on Apple silicon](https://support.apple.com/en-us/102527). "Electron" and "a binary that stopped existing on macOS" felt like they could be the same story — Rosetta support narrowing, an Intel-only binary no longer launching.
+
+It wasn't. Nothing in the failure was architecture-specific, and I hadn't actually confirmed the connection — I'd pattern-matched two things that happened to be in my head at the same time. Worth naming, because it's exactly the kind of lead that feels right and costs you an hour before you check it.
 
 ## The misleading part
 
-The first thing that slowed me down was that the failure was partial.
+The failure itself was partial, which is what actually pointed me somewhere useful.
 
 `@vscode/test-electron` does two things with a downloaded build: it runs a `--version` probe to confirm the download is sane, and it launches the app to run your tests. The probe kept passing. Only the launch failed.
 
-That combination points you in the wrong direction. A corrupt download fails both. A permissions problem fails both. Something that passes one check and fails the next suggests the two checks are reaching different places — which turned out to be exactly right, and is the thread worth pulling.
-
-They resolve the path differently. The probe walks relatively:
+That combination rules out a corrupt download or a permissions problem — both would fail everything. Something that passes one check and fails the next means the two checks are reaching different places. They resolve the path differently. The probe walks relatively:
 
 ```
 ../../../Contents/Resources/app/bin/code
@@ -38,13 +40,11 @@ path.resolve(appPath, 'Contents', 'MacOS', 'Electron');
 
 One of those depends on a name. The other doesn't. Only the one that depends on a name broke.
 
-## The rename, and the shim that hid it
+## Filing the issue, and finding it was already solved
 
-VS Code 1.110 renamed the macOS main binary. `Contents/MacOS/Electron` became the product's short name — `Code` on Stable, `Code - Insiders` on Insiders. That landed in [microsoft/vscode#291948](https://github.com/microsoft/vscode/pull/291948) and merged on **2026-02-03**.
+I filed [microsoft/vscode-test#348](https://github.com/microsoft/vscode-test/issues/348) with the reproducer — scoped to `darwin-arm64` + Insiders, since that's the combination that failed on my CI while Stable and every other OS stayed green.
 
-Nothing broke. The release shipped a compatibility symlink at the old location, so every consumer that had hardcoded `Electron` kept working, unaware that the name it depended on was already gone.
-
-Then, on **2026-07-20**, [microsoft/vscode#326502](https://github.com/microsoft/vscode/pull/326502) removed the symlink. Within a day, the failures started.
+While writing it up I found [#349](https://github.com/microsoft/vscode-test/issues/349), filed about forty minutes earlier by another user, Aasim Khan. He'd already done the real work: VS Code renamed the macOS main binary from `Contents/MacOS/Electron` to the product's short name (`Code` on Stable, `Code - Insiders` on Insiders) in [microsoft/vscode#291948](https://github.com/microsoft/vscode/pull/291948), merged **2026-02-03**. The release shipped a compatibility symlink at the old location, so every consumer that had hardcoded `Electron` — including `@vscode/test-electron` — kept working without knowing the name it depended on was already gone. Then, on **2026-07-20**, [microsoft/vscode#326502](https://github.com/microsoft/vscode/pull/326502) removed that symlink. Within a day, the failures started.
 
 | Date | Event |
 | --- | --- |
@@ -52,12 +52,15 @@ Then, on **2026-07-20**, [microsoft/vscode#326502](https://github.com/microsoft/
 | 2026-02 | 1.110 ships with an `Electron` → product-name symlink |
 | 2026-07-20 | Symlink removed |
 | ~2026-07-21 | Every consumer spawning the old path starts failing |
+| 2026-07-22 | #348 and #349 filed, independently, ~40 minutes apart |
 
-So the breaking change and the break were five months and two pull requests apart, in a different repository from the one reporting the error. Nothing in the stack trace pointed at either.
+So the breaking change and the break were five months and two pull requests apart, in a different repository from the one reporting the error — and someone else had already connected all of it before I had. Aasim's issue even named the fix direction: read the bundle's real name instead of hardcoding one.
 
 ## Asking instead of assuming
 
-The fix is to stop guessing the executable's name and ask the bundle what it is called. macOS already stores this: every `.app` has an `Info.plist`, and `CFBundleExecutable` is the field the operating system itself reads when you double-click the icon.
+Diagnosed is not shipped, though, and #349 had been open with no PR against it. So I wrote one.
+
+The fix is to stop guessing the executable's name and ask the bundle what it's called. macOS already stores this: every `.app` has an `Info.plist`, and `CFBundleExecutable` is the field the operating system itself reads when you double-click the icon.
 
 ```ts
 function resolveDarwinAppExecutable(appPath: string): string {
@@ -82,16 +85,16 @@ Two deliberate choices in something this small.
 
 **The old name stays as the fallback.** Any bundle whose plist predates the rename, lacks the key, or can't be opened gets exactly the string the function returned before. That makes the change a strict superset of the old behaviour, which is what lets it ship without a version check or a migration note.
 
-It went in as [microsoft/vscode-test#350](https://github.com/microsoft/vscode-test/pull/350), with six unit tests covering Stable and Insiders after the rename, both before it, a malformed plist, and non-macOS platforms — and closed two open issues from people hitting the same wall.
+It went in as [microsoft/vscode-test#350](https://github.com/microsoft/vscode-test/pull/350), with six unit tests covering Stable and Insiders after the rename, both before it, a malformed plist, and non-macOS platforms — and closed both #348 and #349.
 
 ## What I actually took from it
 
-The bug was easy once located. Locating it was the work, and the reason it was hard is the part that generalises.
+The bug was easy once located. Locating it — and not stopping at the first plausible story — is the part that generalises.
 
-**A hardcoded name is an undeclared dependency on someone else's decision.** `'Electron'` looks like a constant. It reads like part of the path. It is actually a value owned by a different team, and the moment you write it into your source you have taken a dependency without recording it anywhere — no version range, no changelog entry, nothing to grep when it changes.
+**Pattern-matching isn't diagnosis.** "Electron" plus "a binary that vanished on macOS" plus a Rosetta warning I'd seen days earlier felt connected. It wasn't, and I lost time on it because I didn't check before I believed it. The probe-vs-launch split was the first evidence I actually verified, and it's the one that led somewhere.
 
-**A compatibility shim moves the failure, it doesn't remove it.** The symlink was the right call by the VS Code team; it gave the ecosystem five months to adapt. But it also meant no one adapted, because nothing hurt. The shim converted a loud break at the source into a quiet break later, in someone else's repository, detached from the change that caused it. If you ship one, the deprecation window is only useful if somebody is told the clock is running.
+**Search before you diagnose.** I filed my own issue before finding that someone had already filed a better one. That's fine — a reproducer with a scoped repro case is useful regardless — but the lesson is to search the tracker with the specific symptom before spending an hour reconstructing a root cause that's sitting in an issue filed forty minutes earlier.
 
-**When the platform exposes the answer, read it.** `CFBundleExecutable` existed the whole time. The original code did not need to guess, and neither does anything else that has to find the executable inside a macOS bundle. Every time I hardcode a name that another system defines, I am betting that it will never change — and that bet gets settled at whatever moment is least convenient.
+**A correct diagnosis with no PR against it is still a bug.** Aasim named the right fix direction. Nobody had shipped it. "Someone already figured this out" is not the same as "this is handled" — the gap between the two is exactly where I could be useful, and it's a cheap way to contribute to a project you don't otherwise have context in.
 
-The last one is the one I keep. Not "write more defensive code" — the fix is barely defensive, it's twelve lines. The habit worth building is noticing, at the moment you type a literal, whether the thing you just wrote belongs to you.
+**A hardcoded name is an undeclared dependency on someone else's decision.** `'Electron'` looks like a constant. It is actually a value owned by a different team, and the moment you write it into your source you've taken a dependency on it without recording that anywhere. When the platform exposes the real answer — `CFBundleExecutable` existed the whole time — reading it beats guessing it, and the guess gets settled at whatever moment is least convenient.

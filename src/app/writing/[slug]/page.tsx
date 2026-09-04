@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import rehypeShiki from "@shikijs/rehype";
+import remarkGfm from "remark-gfm";
 
 import { formatDate, getPost, getPosts } from "@/lib/posts";
 
@@ -76,6 +77,7 @@ export default async function Article({
           source={post.content}
           options={{
             mdxOptions: {
+              remarkPlugins: [remarkGfm],
               rehypePlugins: [
                 [
                   rehypeShiki,
