@@ -23,9 +23,10 @@ export default function Home() {
           <div className="max-w-[280px] pb-2">
             <p className="text-sm leading-relaxed text-muted-foreground">
               I&apos;m <strong className="font-medium text-foreground">Miguel</strong>,
-              a senior frontend engineer in Colombia. Nine production Next.js
-              platforms since 2023, and a performance habit that predates all of
-              them.
+              a senior frontend engineer in Colombia with 17+ years of
+              experience. A performance habit older than any framework I use,
+              and open-source code — one widget alone serves 11M+ requests a
+              month.
             </p>
             <Link
               href="/writing"

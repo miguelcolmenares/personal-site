@@ -23,13 +23,14 @@ export const site = {
     process.env.NEXT_PUBLIC_SITE_URL ??
     "https://personal-site-miguelcolmenares-projects.vercel.app",
   description:
-    "Senior Frontend Engineer. Nine production Next.js platforms since 2023, a performance thread that runs six years further back, and notes on what each one taught me.",
+    "Senior Frontend Engineer with 17+ years of experience. A performance habit older than any framework I use, and open-source code — one widget alone serves 11M+ requests a month.",
   location: "Madrid, Cundinamarca, Colombia",
   availability: "Open to senior frontend roles",
   links: {
     github: "https://github.com/miguelcolmenares",
     linkedin: "https://linkedin.com/in/miguelension",
     npm: "https://npmjs.com/~miguel.colmenares",
+    packagist: "https://packagist.org/users/miguelcolmenares/",
     email: "mailto:miguelension@gmail.com",
   },
 } as const;
